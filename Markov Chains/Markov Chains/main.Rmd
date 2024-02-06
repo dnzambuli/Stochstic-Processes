@@ -41,6 +41,7 @@ transition_mat
 Show the transition between the states
 
 ```{r}
+library(DiagrammeR)
 graph.code <- "digraph {
   graph [rankdir = 'LR'];
   node [fontname = 'helvetica', shape = circle];
@@ -209,8 +210,58 @@ grViz("digraph{
 }")
 ```
 
+> Although the directors propose a reduction in the rules to keep patients in the ICU there is an increase in the number of ward patients that move from the ward to the ICU.
+>
+> This method does not seem to be beneficial.
+
 ### iii. Using Markov chain analysis, will the policy advocated by the Board of Governor actually save the money?
 
 ```{r}
 
+# historical steady state
+hist_stdy_spc = steadyStates(new("markovchain",
+                                 states = patient_states,
+                                 transitionMatrix = historical_matrix))
+
+print("The historical steady space")
+hist_stdy_spc
+
+
+# proposed steady state
+prop_stdy_spc = steadyStates(new("markovchain",
+                                 states = patient_states,
+                                 transitionMatrix = proposed_matrix))
+
+print("The proposed steady space")
+prop_stdy_spc
 ```
+
+$$
+cost\ for\ hospitalization = \pi = [\pi_{ICU}, \pi_{ward}, \pi_{out-patient}]
+$$
+
+The cost for the hospital to run can be expressed as
+
+Given that the hospital **does not** incur any dept for outpatients
+
+$$
+historical = 0.1129032*1000 + 0.2419355*500 + 0.6451613*0\\
+= 233.8709
+$$
+
+The proposed new cost
+
+$$
+proposed=0.1428571*1000 + 0.2857143*500 + 0.5714286*0\\
+=285.7142
+$$
+
+> The proposal by the directors costs `51.84 dollars` more than the historical data
+>
+> -   The increased movement from ICU to the Ward causes an increased movement from ward to ICU.
+>
+> -   It seems that the premature release from the ICU causes a spike in the amount spent for the Ward hospitalization.
+>
+> -   Maybe due to a reduced service most of those released to the ward end up back in the ICU. This is added back to the people who were initially in the ward and are moved to the ICU.
+>
+> This is backed by the `100 %` increase in the people who are initially in the ward to getting into the ICU.
