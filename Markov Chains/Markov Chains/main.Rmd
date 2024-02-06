@@ -1,0 +1,216 @@
+---
+title: "Assignment 2"
+author: "Nzambuli Daniel"
+date: "2024-02-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# QUESTION 1
+
+## A manufacturing company has a certain piece of equipment that is inspected at the end of each day and classified as just overhauled, good, fair or inoperative. If the item is inoperative it is overhauled, a procedure that takes one day. Suppose the four classifications can be denoted by 1, 2, 3 and 4 respectively. Assume that the working condition of the equipment follows a Markov chain with a transition matrix.
+
+$$
+\left[\begin{matrix}
+0& \frac{3}{4}& \frac{1}{4}& 0\\
+0 & \frac{1}{2} & \frac{1}{2} & 0 \\
+0 & 0 & \frac{1}{2} & \frac{1}{2} \\
+1 & 0 & 0 & 0
+\end{matrix}\right]
+$$
+
+## If it costs US\$ 125 to overhaul a machine (including lost time) on average and US\$ 75 as production is lost if a machine is found inoperative. Using steady state probabilities, compute the expected per day cost of maintenance. 
+
+```{r}
+library(diagram)
+
+transition_mat = matrix(c(0, 0.75, 0.25, 0,
+                          0, 0.5, 0.5, 0,
+                          0, 0, 0.5, 0.5,
+                          1, 0, 0, 0), nrow = 4, 
+                        byrow = TRUE)
+states = c("overhauled", "good", "fair", "inoperative")
+colnames(transition_mat) = states
+rownames(transition_mat) = states
+transition_mat
+```
+
+Show the transition between the states
+
+```{r}
+graph.code <- "digraph {
+  graph [rankdir = 'LR'];
+  node [fontname = 'helvetica', shape = circle];
+  
+  # Define the nodes
+  tab1 [label = 'Overhauled', fillcolor = '#46f53d', style = filled];
+  tab2 [label = 'Good', fillcolor = '#a5f53d', style = filled];
+  tab3 [label = 'Fair', fillcolor = '#e2f53d', style = filled];
+  tab4 [label = 'Inoperative', fillcolor = '#f5873d', style = filled];
+  
+  # Edge definitions with the node IDs
+  tab1 -> tab2 [label = '0.75'];
+  tab2 -> tab3 [label = '0.5'];
+  tab3 -> tab4 [label = '0.5'];
+  tab4 -> tab1 [label = '1'];
+  tab2 -> tab2 [label = '0.5'];
+  tab3 -> tab3 [label = '0.5'];
+  tab1 -> tab3 [label = '0.25'];
+}"
+
+grViz(graph.code)
+```
+
+> There is communication through all states.
+>
+> -   once a machine is **overhauled** it can turn out to be in `good` or `fair` condition which tracks with the real world where some repairs are not perfect
+>
+> -   machines in **good** condition can stay in good condition half the time or become fair the other half of the time
+>
+> -   a machine in fair condition can stay in the fair condition or transition to become inoperable
+>
+> -   Once a machine gets to an inoperable state it **only** goes to overhaul
+
+To find the overall daily cost multiplying the state matrix $cost\ of\ business = S = \begin{bmatrix}125, 0, 0, 75\end{bmatrix}$ by the steady state of the transition matrix `where the state stops changing`
+
+```{r}
+# steady state
+library(markovchain)
+
+markov_chain = new("markovchain",
+                   states = states,
+                   transitionMatrix = transition_mat)
+
+# computed steady state
+steady_state = steadyStates(markov_chain)
+steady_state
+```
+
+$$
+steady\ state = \pi = [\pi_{overhaul}, \pi_{good}, \pi_{fair}, \pi_{inoperable}]\\
+\\
+\\
+= [0.1818182, 0.2727273, 0.3636364, 0.1818182]
+$$
+
+This means that if a company is using `125 dollars` for **Overhauled** and `75 dollars` for **Inoperable** computers the average daily cost can be expressed as
+
+$$
+daily\ cost = 0.1818182*125 + 0.2727273 * 0+ 0.3636364 * 0+0.1818182*75\\
+= 36.36364
+$$
+
+The company spends on average `36.36 dollars` as no money is lost when machines are in **Good** or **Fair** conditions.
+
+> The rate of Overhauling and Inoperable per unit is similar
+>
+> -   This tracks because once a machine is in an inoperable state it can only be overhauled all the time
+
+# QUESTION 2 
+
+## Hope Hospital operates on a charity basis. All expenses are paid by a nongovernmental organization (NGO). Recently the Board of Governors of the hospital has been complaining about the size of the budget and insisting that the hospital cut expenses. The major concern area has been the cost of keeping patients in intensive care unit. The cost has averaged \$ 1000per week per person compared to only \$ 500 per week per person for keeping patients in the wards. Past history shows that of those patients in ICU at the beginning of the week, 50 per cent will be there at the end of the week and 50 per cent will be moved to a ward. Of the patients in the wards at the beginning of the week, 50 per cent will be there at the end of the week, 10 percent will get worse and be transferred to the ICU. 85 per cent will remain outpatients at the end of the week, 10 per cent will be admitted to the ward and 5 per cent will be admitted to ICU. The Board of Governors believes that the criteria for keeping patients in ICU are too strict and has instructed the ICU staff to relax the criteria so that only 40 per cent of the ICU patients remain in ICU each week and 60 per cent are transferred to wards. The staff insist that if this is done 20 per cent of the ward patients will be going into ICU each week and only 30 per cent will be transferred to outpatient status. 
+
+### i. Develop a transition matrix for patients from the historical data described above. 
+
+To make `100 %` of state transition
+
+> -   **ICU** 50% stay in ICU and 50% go to ward at the week end
+>
+> -   **Ward** 50% remain in ward 10 % go to ICU and `40%` transition to outpatient
+>
+> -   **Out-patient** 5% end up in ICU 10 % end up in the ward and 85% remain in Out-patient
+
+```{r}
+historical_matrix = matrix(c(0.5, 0.5, 0,
+                             0.1, 0.5, 0.4,
+                             0.05, 0.1, 0.85),
+                           nrow = 3,
+                           byrow = TRUE)
+patient_states = c("ICU", "Ward", "Out-patient")
+colnames(historical_matrix) = patient_states
+rownames(historical_matrix) = patient_states
+
+print("Transition Matrix for Historical Data")
+historical_matrix
+```
+
+illustrate the state transition
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'ICU', fillcolor = '#e21a1a', style = filled];
+      tab2 [label = 'Ward', fillcolor = '#e2981a', style = filled];
+      tab3 [label = 'Out-patient', fillcolor = '#8be21a', style = filled];
+      
+      # Arch
+      tab1 -> tab1 [label = '0.5'];
+      tab1 -> tab2 [label = '0.5'];
+      tab2 -> tab1 [label = '0.1'];
+      tab2 -> tab2 [label = '0.5'];
+      tab2 -> tab3 [label = '0.4'];
+      tab3 -> tab2 [label = '0.1'];
+      tab3 -> tab3 [label = '0.85'];
+      tab3 -> tab1 [label = '0.05'];
+      
+}")
+```
+
+> -   Most outpatient individuals remain as outpatients, there are very few people who come in as outpatient and end up in ICU. Patients who end up in the ward are twice the number of outpatients who end up hospitalized.
+>
+> -   Patients in the ward get released to outpatient at `40%` and remain hospitalized at the weeks end at `50%` with `10%` end up in the ICU.
+>
+> From the real world this model tracks
+
+### ii. Develop a transition matrix that reflects the proposal by the Board of Governors 
+
+an assumption is made that outpatient probability remains constant
+
+```{r}
+proposed_matrix = matrix(c(0.4, 0.6, 0,
+                           0.2, 0.5, 0.3,
+                           0.05, 0.1, 0.85),
+                         nrow = 3,
+                         byrow = TRUE)
+colnames(proposed_matrix) = patient_states
+rownames(proposed_matrix) = patient_states
+print("The Proposed Patient Matrix")
+proposed_matrix
+```
+
+illustrate
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'ICU', fillcolor = '#e21a1a', style = filled];
+      tab2 [label = 'Ward', fillcolor = '#e2981a', style = filled];
+      tab3 [label = 'Out-patient', fillcolor = '#8be21a', style = filled];
+      
+      # Arch
+      tab1 -> tab1 [label = '0.4'];
+      tab1 -> tab2 [label = '0.6'];
+      tab2 -> tab1 [label = '0.2'];
+      tab2 -> tab2 [label = '0.5'];
+      tab2 -> tab3 [label = '0.3'];
+      tab3 -> tab2 [label = '0.1'];
+      tab3 -> tab3 [label = '0.85'];
+      tab3 -> tab1 [label = '0.05'];
+      
+}")
+```
+
+### iii. Using Markov chain analysis, will the policy advocated by the Board of Governor actually save the money?
+
+```{r}
+
+```

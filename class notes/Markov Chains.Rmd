@@ -1,0 +1,222 @@
+---
+title: "Topic 1_Markov Chains"
+author: "Author"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Question 1:
+
+Determine the stationary distribution for the Markov chain whose transition probability matrix is:
+
+```{r echo=FALSE, out.width=70%, fig.align='center'}
+knitr::include_graphics("Picture1.png")
+```
+
+### Answer 1:
+
+We first enter the matrix in R:
+
+```{r}
+mat <- matrix(c(0,0,1/2,1/2,0,0,1/3,2/3,1/4,3/4,0,0,1/3,2/3,0,0),nrow=4,ncol=4,byrow=TRUE)
+```
+
+Then, we set up a new Markov chain object; don’t forget to load the markovchain package before deploying the object.
+
+```{r}
+library(markovchain)
+mChain <- new("markovchain", states=c("0","1","2","3"), transitionMatrix=mat)
+```
+
+Finally, we use `steadyState` to obtain the stationary distribution
+
+```{r}
+steadyStates(mChain)
+```
+
+The steady-state distribution is given by the vector
+
+$\Pi=(\pi_{1},\pi_{2},\pi_{3},\pi_{4})=(0.151,0.349,0.192,0.308)$
+
+### Question 2:
+
+Consider a simplified monopoly game with only five squares and respective incomes of `$200`, `$0`, `−$75`, `$105`, and `−$130`. A player starts at the first square, rolls a fair die once, and moves forward as many steps as the die show.
+
+1.  Argue that this game can be modeled as a Markov chain and find its transition probability matrix.
+
+2.  Compute the steady-state probability of each square, and find the long-run winning of the player.
+
+### Answer 2:
+
+Let state 1 give income `$200`, state 2 give income `$0`, state 3 give income `−$75`, state 4 give income `$105`, and state 5 give income `−$130`. Since the rolls of the die are independent, the next state will depend only on the present state. We use the fact that the die is fair and that the states are traversed regularly, and write the following transition probability matrix:
+
+```{r echo=FALSE, out.width=70%, fig.align='center'}
+knitr::include_graphics("Picture2.png")
+```
+
+We type the transition probability matrix, prepare a Markov chain, and use steadyStates (makovchain package) to obtain the stationary distribution vector:
+
+```{r}
+tpm <- matrix(c(1/6,1/3,1/6,1/6,1/6,
+1/6,1/6,1/3,1/6,1/6,
+1/6,1/6,1/6,1/3,1/6,
+1/6,1/6,1/6,1/6,1/3,
+1/3,1/6,1/6,1/6,1/6),
+nrow=5, ncol=5, byrow=TRUE)
+
+#Creating Markov chain object
+mc <- new("markovchain", transitionMatrix=tpm, states=c("1","2","3","4","5"))
+
+steadyStates(mc)
+```
+
+As shown, in the long-run the chain will be uniformly distributed between the five states, hence the expected winnings of the player are calculated to be
+
+$E[W]=(0.2\times200)+(0.2\times0)+(0.2\times(-75))+(0.2\times105)+(0.2\times(-130))=20$
+
+### Question 3:
+
+Consider a 5-state Markov chain with the following transition probability matrix.
+
+```{r echo=FALSE, out.width=70%, fig.align='center'}
+knitr::include_graphics("Picture3.png")
+```
+
+1.  Use R to plot a diagram of the Markov chain. Identify all transient and recurrent classes. Identify all absorbing and reflective states. Find the period of each state.
+
+2.  Simulate three trajectories of the chain that start at a randomly chosen state. Comment on what you see.
+
+3.  Find the steady-state probabilities and interpret them. Is it an ergodic chain?
+
+4.  Plot the unconditional probabilities at time n against time and comment on how fast the probabilities converge to the steady-state distribution.
+
+### Asnwer 3:
+
+To plot a diagram for this Markov chain in R, we first enter the transition probability matrix and transpose it:
+
+```{r}
+
+tpm <- matrix(c(1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0.2, 0, 0, 0, 0.8, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0), nrow=5, ncol=5, byrow=TRUE)
+
+tpm.tr <- t(tpm)
+```
+
+Then, we set up the diagram package and appeal to the plotmat command:
+
+```{r}
+
+library(diagram)
+
+plotmat(tpm.tr, arr.length=0.3, arr.width=0.15, box.col="green", box.lwd=1, box.prop=0.5, box.size=0.1, box.type="circle", cex.txt=0.85, lwd=1, self.cex=0.3, self.shiftx=0.01, self.shifty=0.09)
+```
+
+State 2 is reflective. The chain leaves this state in one step. Accordingly, it forms a separate transient class that has an infinite period.
+
+In turn, states 3, 4 and 5 communicate and thus belong to the same class. The chain can return to any state in this class within 3, 6, 9, 12… steps, which implies that the period is equal to 3. Since there is a positive probability to leave this class, it is transient.
+
+We can use R to verify these findings. The package markovchain is used below.
+
+```{r}
+
+mc <- new("markovchain", transitionMatrix=tpm, states=c("1","2","3","4","5"))
+
+recurrentClasses(mc)
+transientClasses(mc)
+absorbingStates(mc)
+
+```
+
+We set a number of steps equal to 30 and specify an initial probability vector $p_{0} = [0.2, 0.2, 0.2, 0.2, 0.2]$.
+
+We also specify a matrix, empty at first, containing the states. (Make sure to use the same seed value if you want to reproduce the trajectories shown in continuation.)
+
+```{r}
+
+#Speciffying total number of steps
+nSteps <- 30
+
+#Specifying seed for reproducibility
+set.seed(3339969)
+
+#Specifying initial probability
+p0 <- c(0.2, 0.2, 0.2, 0.2, 0.2)
+
+#Specifying matrix containing states
+MC.states <- matrix(NA, nrow=nSteps, ncol=3)
+
+```
+
+Then, we simulate states with a for loop.
+
+```{r}
+#Simulating states
+for (i in 1:3){
+state0 <- state0 <- sample(1:5, 1, prob=p0)
+MC.states[,i] <- rmarkovchain(n=nSteps-1, object=mc, t0=state0, include.t0=TRUE)
+}
+```
+
+Lastly, we plot the simulated trajectories, as shown.
+
+```{r}
+
+#Plotting simulated trajectories
+matplot(MC.states, type="l", lty=1, lwd=2, col=2:4, xaxt="n", ylim=c(1,5), xlab="Step", ylab="State", panel.first=grid())
+axis(side=1, at=c(1,5,10,15,20,25,30))
+points(1:nSteps, MC.states[,1], pch=16, col=2)
+points(1:nSteps, MC.states[,2], pch=16, col=3)
+points(1:nSteps, MC.states[,3], pch=16, col=4)
+
+```
+
+Since state 1 is an absorbing state, sooner or later the trajectories transition into this state and do not leave it for the remainder of the simulation.
+
+The steady-state probabilities are given by the vector $𝑷 = [\pi_1, \pi_2, \pi_3, \pi_4, \pi_5]$ such that
+
+```{r echo=FALSE, out.width=70%, fig.align='center'}
+knitr::include_graphics("Picture4.png")
+```
+
+with the additional condition $\pi_1+ \pi_2+ \pi_3+ \pi_4+ \pi_5=1$.
+
+The solution to this system of equations is easily found to be ${\pi_1 = 1, \pi_2 = \pi_3 = \pi_4 = \pi_5 = 0}$, which is a predictable steady-state configuration because 1 is an absorbing state, as mentioned above. This can be easily confirmed with R:
+
+```{r}
+steadyStates(mc)
+
+```
+
+To plot the unconditional probabilities at time t, we first specify the number of steps (say, 75) and an initially empty matrix for the probabilities
+
+```{r}
+
+#Specifying total number of steps
+nSteps <- 75
+
+#Specifying matrix containing probabilities
+probs <- matrix(NA, nrow=nSteps, ncol=5)
+
+```
+
+Then, we proceed to compute the probabilities and plot them against the steps.
+
+```{r}
+
+#Computing probabilities
+probs[1,] <- p0
+for (n in 2:nSteps){
+probs[n,] <- probs[n-1,] %*% tpm
+}
+
+#Plotting probabilities vs step by state
+matplot(probs, type="l", lty=1, lwd=2, col=1:5, ylim=c(-0.1,1.1), xlab="Step", ylab="Probability", panel.first=grid())
+
+legend("right", c("State 1", "State 2", "State 3", "State 4", "State 5"), lty=1, lwd=2, col=1:5)
+
+```
+
+As can be seen, the probability associated with state 1 rises gradually and reaches unity at around step 60. All other states decay to zero probability, albeit with some oscillation in the case of states 3, 4, and 5.
