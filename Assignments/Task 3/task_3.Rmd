@@ -1,0 +1,129 @@
+---
+title: "Quiz 3"
+author: "Nzambuli Daniel"
+date: "2024-02-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# QUESTION 1 (10 MARKS):
+
+## A cell type can exist in four states: A growth state, a resting state, a reproduction state, or it can be dead. It starts in the growth state. From the growth state it moves to the resting state with a rate of 0.3 and to the reproduction state with a rate 0.1, or it dies with a rate of 0.1. From the resting state it moves to the growth state with a rate of 0.2, or it dies with a rate of 0.05. From the reproduction state it moves to the resting state at a rate 0.5, or it dies at a rate of 0.3. 
+
+$$
+Q\ matrix = \left[\begin{matrix}
+-0.5 & 0.3 & 0.1 & 0.1 \\
+0.2 & 0.25 & 0 & 0.05 \\
+0 & 0.5 & -0.8 & 0.3 \\
+0 & 0 & 0 & 0
+\end{matrix}\right]
+$$
+
+> -   there is no transition rate for recurrence
+>
+> -   the sum of all rows is equal to `0`
+
+Transition Matrix
+
+$$
+P\ matrix = \left[\begin{matrix}
+0 & 0.6 & 0.2 & 0.2\\
+0.8 & 0 & 0 & 0.2\\
+0 & 0.625 & 0 & 0.375\\
+0 & 0 & 0 & 0
+\end{matrix}\right]
+$$
+
+> -   main diagonal = 0
+>
+> -   the row sum is 1
+
+```{r}
+library(DiagrammeR)
+graph.code <- "digraph {
+  graph [rankdir = 'LR'];
+  node [fontname = 'helvetica', shape = circle];
+  
+  # Define the nodes
+  tab1 [label = 'Growth', fillcolor = '#48b100', style = filled];
+  tab2 [label = 'Resting', fillcolor = '#906f00', style = filled];
+  tab3 [label = 'Reproduction', fillcolor = '#6f9000', style = filled];
+  tab4 [label = 'death', fillcolor = '#ff0000', style = filled];
+  
+  # Edge definitions with the node IDs
+  tab1 -> tab2 [label = '0.6'];
+  tab1 -> tab3 [label = '0.2'];
+  tab1 -> tab4 [label = '0.2'];
+  tab2 -> tab1 [label = '0.8'];
+  tab2 -> tab4 [label = '0.2'];
+  tab3 -> tab2 [label = '0.625'];
+  tab3 -> tab4 [label = '0.375'];
+}"
+
+grViz(graph.code)
+```
+
+> **Death** is an absorption state. Once a cell has died it can not come back to any of its previous states
+>
+> **Resting** a cell in resting state can only go into growth or death. However, the cell tends to go into a growth state more times than it dies.
+>
+> **Growth** a cell growing tends to go into a resting states $\frac {6}{10}$ times and has an equal likelihood of going to `reproduction` or `death` the rest of the time
+>
+> **Reproduction** a cell in the reproduction state can only go into resting and death states. The cell is likely to go to the resting state $\frac{5}{8}$ times.
+
+### a) What is the expected lifetime of the cell? Compute the answer and describe in detail how such computations are done.
+
+The lifespan of a cell is the time the cell takes to move from a given state to the absorbing state(**death**).
+
+To find this the **fundamental matrix** needs to be found
+
+> **Fundamental Matrix**
+>
+> -   A matrix of the states excluding the absorption state
+
+$$
+F\ (fundamental\ matrix) = \left[\begin{matrix}
+-0.5 & 0.3 & 0.1\\
+0.2 & -0.25 & 0\\
+0 & 0.5 & -0.8
+\end{matrix}\right]
+$$
+
+to find the absorption rate
+
+$$
+absorption\ time = -1 * \frac{1}{|F|} * \left[A^{adj}\right]^t
+$$
+
+this can also be done by
+
+$$
+absorption\ rate\ (N) = -1 * (F)^{-1}
+$$
+
+```{r}
+f_mat = matrix(c(-0.5,0.3, 0.1, 0.2, -0.25, 0, 0, 0.5,-0.8), nrow = 3,byrow = TRUE)
+colnames(f_mat) = c("growth", "resting", "reproduction")
+rownames(f_mat) = c("growth", "resting", "reproduction")
+f_mat
+```
+
+```{r}
+# inverse of the matrix
+inv_f = solve(f_mat)
+
+
+# absorption of the matrix
+abs_rate = -1 * inv_f
+
+abs_rate
+```
+
+#### Time to death for cells
+
+```{r}
+rowSums(abs_rate)
+```
