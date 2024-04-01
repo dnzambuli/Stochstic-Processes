@@ -1,0 +1,358 @@
+---
+title: "Birth Death Process"
+author: "StA 2060A - Stochastic Processes"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Realization of a Yule Furry process
+
+We obtain a realization of a Yule Furry process with $X(0) = 1$ and birth rate $\lambda$ as 0.20 and 0.35, when it is observed for t = 10 time units.
+
+### Part I: Input birth rates, X(0)and t
+
+```{r}
+la=c(0.20,0.35);a=1;t=10
+```
+
+### Part II: Realizations
+
+```{r}
+int=x=arr=u=v=w=list(); N=c()
+for(j in 1:length(la))
+{
+set.seed(j)
+y=s=c();sumy=0; i=1;s[1]=a
+while(sumy<t)
+{
+y[i]=rexp(1,rate=s[i]*la[j])
+s[i+1]=s[i]+1
+sumy=sum(y)
+i=i+1
+}
+int[[j]]=y[-length(y)]
+N[j]=length(int[[j]])
+x[[j]]=s[-length(s)]
+u[[j]]=rep(x[[j]],each=2)
+arr[[j]]=round(cumsum(int[[j]]),2)
+v[[j]]=c(0,round(rep(arr[[j]],each=2),3),t)
+w[[j]]=c(0,arr[[j]])
+}
+N
+list("States"=x,"Interval r.v."=int,"Birth epochs"=arr)
+```
+
+### Part III: Graphs of realizations
+
+```{r}
+par(mfrow=c(2,1), mar=c(4, 4, 2, 1) + 0.1)
+rate=paste("Birth Rate=",la,sep=" ")
+number=paste("No of Births=",N,sep=" ")
+for(j in 1:length(la))
+{
+plot(v[[j]],u[[j]],"l",main=rate[j],ylab="States",
+xlab="Occurrence time", yaxt="n",xaxt="n",col="blue")
+axis(2,at=sort(unique(u[[j]])),labels=sort(unique(u[[j]])),
+las=2)
+axis(1,at=round(c(arr[[j]],t),2),las=2,cex.axis=0.7)
+points(w[[j]],x[[j]],pch=20,col="dark blue")
+abline(v=t)
+legend("topleft",legend=number[j],cex=.8)
+}
+par(mfrow=c(1,1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+## Multiple Realization of a linear death process (Yule Furry Process)
+
+Suppose ${X(t), t ≥ 0}$ is a Yule Furry process with birth rate $\lambda$ = 0.12 and X(0) = 1. With this code, we obtain 150 realizations of the process when it is observed for t = 10 time units and verify whether X(t ) follows a geometric distribution.
+
+### Part I: Input birth rate, t and number of simulations
+
+```{r}
+lambda=.12; t=10; nsim=150
+```
+
+### Part II: Multiple simulations
+
+```{r}
+x=c() # population size at t
+for(m in 1:nsim)
+{
+set.seed(m); y=c(); sumy=0; i=1
+while(sumy<t)
+{
+y[i]=rexp(1,rate=i*lambda)
+sumy=sum(y); i=i+1
+}
+l=length(y); l; y=y[-l]; x[m]=length(y)+1
+}
+x; mean(x);var(x); e=exp(1); p=e^(-lambda*t); mu=1/p;mu
+var=(1-p)/p^2; var
+
+```
+
+### Part III: Observed and expected distributions
+
+```{r}
+d=data.frame(table(factor(x, levels=1:max(x))))
+obf=d$Freq; N=sum(obf); rf=obf/N; t=sort(unique(x))
+v=p*(1-p)^(t-1); ex=nsim*v; ex=round(ex,2);
+a=min(min(rf),min(v));b=max(max(rf),max(v))
+u=seq(round(a,2),b,.03)
+plot(t,rf,"h",col="blue",lty=1,lwd=2,xlab="Values of X",
+main="Observed and Expected Distributions",
+ylim=range(c(a,b)),ylab="Relative Frequency and Expected probability",
+yaxt="n")
+axis(2,at=u); points(t,rf,pch=20)
+lines(t,v,"h",col="red",lty=2,lwd=1)
+points(t,v,pch=20)
+abline(h=0, col="blue")
+legend("topright",cex=.7,col=c("blue","red"),lty=c(1,2),
+legend=c("Observed Distribution","Expected Distribution"),
+lwd=c(2,1))
+
+```
+
+### Part IV: Goodness of fit test with pooling frequencies
+
+```{r}
+v1=1-sum(v); v2=c(v,v1); e=nsim*v2; length(e);ob=c(obf,0)
+length(ob); y=c(t,"> 12"); da=round(data.frame(ob,e),2)
+da1=data.frame(y,da);da1
+o1=c(ob[1:8],ob[9]+ob[10]+ob[11]+ob[12])
+e1=c(e[1:8],e[9]+e[10]+e[11]+e[12])
+t1=sum((o1-e1)^2/e1); t1;df=length(o1)-1;df
+b1=qchisq(.95,df); b1; p1=1-pchisq(t1,df); p1
+
+```
+
+### Part V: Goodness of fit test without pooling frequencies
+
+```{r}
+d=length(ob)-1; d
+t=sum((ob-e)^2/e); t; b=qchisq(.95,d); b; p=1-pchisq(t,d); p
+
+```
+
+### Part VI: Goodness of fit test with built-in function
+
+```{r}
+chisq.test(ob,p=v2)
+```
+
+> fail to reject $h_0$
+
+## Realization of a linear death process
+
+We obtain a realization of a linear death process with death rate $\mu$ as 0.1 and 0.25 and X(0) = a = 20, when it is observed for t = 10 time units.
+
+### Part I: Input death rates, X(0) and t
+
+```{r}
+mu=c(.1,.25); a=20; t=10
+```
+
+### Part II: Realizations
+
+```{r}
+
+int=x=arr=u=v=w=list(); N=c()
+for(j in 1:length(mu))
+{
+set.seed(j); y=s=c();sumy=0; i=1;s[1]=a
+while(sumy<t)
+{
+y[i]=rexp(1,rate=s[i]*mu[j])
+s[i+1]=s[i]-1
+if(s[i]==0){break}
+else
+sumy=sum(y); i=i+1
+}
+int[[j]]=y[-length(y)]
+N[j]=length(int[[j]])
+x[[j]]=s[-length(s)]
+u[[j]]=rep(x[[j]],each=2)
+arr[[j]]=round(cumsum(int[[j]]),2)
+v[[j]]=c(0,round(rep(arr[[j]],each=2),3),t)
+w[[j]]=c(0,arr[[j]])
+}
+# x;int;arr;u;v;w
+N
+list("States"=x,"Interval r.v."=int,"Death epochs"=arr)
+```
+
+### Part III: Graphs of realizations
+
+```{r}
+
+par(mfrow=c(2,1), mar=c(4, 4, 2, 1) + 0.1)
+rate=paste("Death Rate=",mu,sep=" ")
+number=paste("No of Deaths=",N,sep=" ")
+for(j in 1:length(mu))
+{
+plot(v[[j]],u[[j]],"l",main=rate[j],ylab="States",
+xlab="Occurrence time",yaxt="n",xaxt="n",col="blue")
+axis(2,at=sort(unique(u[[j]])),labels=sort(unique(u[[j]])),
+las=2)
+axis(1,at=round(c(arr[[j]],t),2),las=2,cex.axis=0.7)
+points(w[[j]],x[[j]],pch=20,col="dark blue")
+abline(v=t)
+legend("bottomleft",legend=number[j],cex=.7)
+}
+
+par(mfrow=c(1,1), mar=c(5, 4, 4, 2) + 0.1)
+```
+
+## Multiple Realization of a linear death process
+
+We obtain 200 realizations of a linear death process with death rate $\mu = 0.12$ and X(0) = 10, when it is observed for t = 12 time units and verify whether X(t ) follows the binomial $B(10, e^{−μt} )$ distribution.
+
+### Part I: Input death rate, X(0),t and number of simulations
+
+```{r}
+
+mu=.12; nsim=200; t=12; ini=10 # X(0)
+
+```
+
+### Part II: Multiple realizations
+
+```{r}
+
+y=s=x=c();
+for(m in 1:nsim)
+{
+set.seed(m); sumy=0; s[1]=ini; i=1
+while(sumy<t)
+{
+y[i]=rexp(1,rate=s[i]*mu)
+s[i+1]=s[i]-1
+if(s[i]==0){break}
+else
+sumy=sum(y); i=i+1
+}
+l=length(y); y=y[-l]; x[m]=ini-length(y)
+}
+mean(x);var(x); e=exp(1);p=e^(-mu*t);p
+mu1=ini*p;mu1; var=ini*p*(1-p);var
+d=data.frame(table(factor(x, levels=0:max(x))));d
+
+```
+
+### Part III: Observed and expected distributions
+
+```{r}
+
+obf=d$Freq; N=sum(obf); rf=obf/N;rf
+ob=c(obf,0,0,0); r=0:ini; rf1=c(rf,0,0,0)
+pr=dbinom(r,size=ini,prob=p);sum(pr)
+ex=nsim*pr; ex=round(ex,2);ex;
+da=data.frame(r,ob,ex);da
+a=min(min(rf1),min(pr));b=max(max(rf1),max(pr))
+u=seq(round(a,2),b,.03);u
+plot(r,rf1,"h",col="blue",lty=1,lwd=2,xlab="Values of X",
+main="Observed and Expected Distributions",ylim=range(c(a,b)),
+ylab="Relative Frequency and Expected probability",yaxt="n")
+axis(2,at=u); points(r,rf1,pch=20)
+lines(r,pr,"h",col="red",lty=2,lwd=1)
+points(r,pr,pch=20)
+abline(h=0, col="blue")
+legend("topright",cex=.7,col=c("blue","red"),lty=c(1,2),
+legend=c("Observed Distribution","Expected Distribution"),
+lwd=c(2,1))
+
+```
+
+### Part IV: Goodness of fit test, with pooling the frequencies
+
+```{r}
+e=nsim*pr;e; o1=c(obf[1:6],obf[7]+obf[8])
+e1=c(e[1:6],e[7]+e[8]+e[9]+e[10]+e[11]); e1
+t1=sum((o1-e1)^2/e1); t1;df=length(o1)-1;df
+b1=qchisq(.95,df); b1; p1=1-pchisq(t1,df); p1
+
+```
+
+### Part V: Goodness of fit test, without pooling the frequencies
+
+```{r}
+ob=c(obf,0,0,0);df1=length(ob)-1; df1
+t=sum((ob-e)^2/e); t; b2=qchisq(.95,df1); b2
+p2=1-pchisq(t,df1); p2
+
+```
+
+### Part VI: Goodness of fit test, with built-in function
+
+```{r}
+chisq.test(ob,p=pr)
+```
+
+```{r}
+library(DescTools)
+GTest(ob,pr)
+```
+
+## Realization of a linear birth-death process
+
+We obtain the realization of a linear birth-death process with birth rate $\lambda$, death rate $\mu$ and X(0) = 10, for a fixed time interval (0, 10]. For comparison we take two sets of birth and death rates as $\lambda = 0.12$, $\mu = 0.1$ and $\lambda = 0.1$, $\mu = 0.4$
+
+### Part I: Input birth and death rates, X(0) and t
+
+```{r}
+la=c(0.12,0.1); mu=c(0.1,0.4); a=10; t=10
+```
+
+### Part II: Realizations
+
+```{r}
+P=matrix(c(mu[1]/(la[1]+mu[1]),la[1]/(la[1]+mu[1]),
+mu[2]/(la[2]+mu[2]),la[2]/(la[2]+mu[2])), ncol=2,byrow=TRUE)
+P # tpm of embedded Markov chain
+S=c(-1,1); int=x=arr=u=v=w=list(); N=c()
+for(j in 1:length(mu))
+{
+set.seed(j)
+y=s=c();sumy=0; i=1;s[1]=a
+while(sumy<t)
+{
+y[i]=rexp(1,rate=s[i]*(la[j]+mu[j]))
+s[i+1]=s[i]+sample(S,1,P[,j],replace=t)
+if(s[i]==0){break}
+else
+sumy=sum(y); i=i+1
+}
+int[[j]]=y[-length(y)]
+N[j]=length(int[[j]])
+x[[j]]=s[-length(s)]
+u[[j]]=rep(x[[j]],each=2)
+arr[[j]]=round(cumsum(int[[j]]),2)
+v[[j]]=c(0,round(rep(arr[[j]],each=2),3),t)
+w[[j]]=c(0,arr[[j]])
+}
+N
+list("States"=x,"Interval r.v."=int,"epochs"=arr)
+```
+
+### Part III: Graphs of realizations
+
+```{r}
+par(mfrow=c(1,2))
+rate=paste("Birth Rate=",la,"Death Rate=",mu,sep=" ")
+number=paste("No of Events=",N,sep=" ")
+for(j in 1:length(mu))
+{
+plot(v[[j]],u[[j]],"l",main=rate[j],ylab="States",
+xlab="Occurrence time",yaxt="n",xaxt="n",col="blue")
+axis(2,at=sort(unique(u[[j]])),labels=sort(unique(u[[j]])),
+las=2)
+axis(1,at=round(c(arr[[j]],t),2),las=2,cex.axis=0.7)
+points(w[[j]],x[[j]],pch=20,col="dark blue")
+abline(v=t)
+legend("topleft",legend=number[j],cex=.7,col="red")
+}
+```

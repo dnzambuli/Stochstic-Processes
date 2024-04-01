@@ -1,0 +1,198 @@
+---
+title: "Random Walk"
+author: "STA 2060A - Stochastic Processes"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simple Random Walk on a Graph
+
+The objective of these exercises is to study a random walk on a small graph through a combination of simulations and analysis using R.
+
+Problem set-up: Consider the simple random walk on the graph shown below.
+
+```{r}
+library(igraph)
+edges = c("a", "b", "a", "e", "a", "d", "b", "a", "b", "e", "b", "c", "d", "a", "d", "c")
+
+graph <- graph(edges, directed = FALSE)
+plot(graph)
+```
+
+We define a Markov chain which moves from vertex to vertex by randomly following an edge to an adjacent vertex. For example,
+
+$P{X_n+1 = A| X_n = D}= \frac{1}{2}$ $P{X_n+1 = C| X_n = A}=\frac{1}{3}$ $P{X_n+1 = B| X_n = D}= 0$
+
+The transition matrix P for this random walk Markov Chain with states $(A,B,C,D,E)$ will be
+
+```{r}
+P <- matrix(0,5,5)
+rownames(P)<-c('A','B','C','D','E')
+colnames(P)<-c('A','B','C','D','E')
+P[1,]<-c(0,1/3,1/3,1/3,0)
+P[2,]<-c(1/3,0,1/3,0,1/3)
+P[3,]<-c(1/2,1/2,0,0,0)
+P[4,]<-c(1/2,0,0,0,1/2)
+P[5,]<-c(0,1/2,0,1/2,0)
+P
+```
+
+## Analysis of the Markov chain
+
+Calculate the invariant probability vector $\bar{\pi}$. In the long run, about what fraction of the time is spent at vertex A?
+
+```{r}
+
+r <- eigen(t(P))
+V<-r$vectors
+pibar<-V[,1]/sum(V[,1])
+pibar
+
+pibar[1]
+
+```
+
+Suppose the random walk begins at vertex A. What is the expected number of steps until the walk returns to A?
+
+```{r}
+1/pibar[1]
+```
+
+We can use simulations to generate the distribution of return times, as the expected value doesn’t tell the full story. First define a function that can randomly step from vertex to vertex:
+
+```{r}
+
+takestep <- function(x) {
+  switch(x,
+         sample(c(2,3,4),1), #A
+         sample(c(1,3,5),1), #B
+         sample(c(1,2),1),   #C
+         sample(c(1,5),1),   #D
+         sample(c(2,4),1))   #E
+}
+
+```
+
+Here's a breakdown of what's happening:
+
+-   When x is 1, it will execute sample(c(2,3,4),1) which randomly selects one element from the vector c(2, 3, 4). This could be 2, 3, or 4.
+
+-   When x is 2, it will execute sample(c(1,3,5),1) which randomly selects one element from the vector c(1, 3, 5). This could be 1, 3, or 5.
+
+-   When x is 3, it will execute sample(c(1,2),1) which randomly selects one element from the vector c(1, 2). This could be 1 or 2.
+
+-   When x is 4, it will execute sample(c(1,5),1) which randomly selects one element from the vector c(1, 5). This could be 1 or 5.
+
+-   When x is 5, it will execute sample(c(2,4),1) which randomly selects one element from the vector c(2, 4). This could be 2 or 4.
+
+Next we define a function that finds the return time to a desired vertex for each simulation:
+
+```{r}
+
+waitingtime <- function(vertex) {
+  x <- vertex
+  for (j in 1:10000) {
+    x <- takestep(x)
+    ifelse(x==vertex, return(j),-1) # takes steps until hits vertex again
+    } }
+
+```
+
+We run many simulations and plot a histogram of the return times:
+
+```{r}
+
+nsims <- 100000
+sims <- matrix(0,nsims)
+for (k in 1:nsims)  sims[k] <- waitingtime(1) # vertex A
+hist(sims,(min(sims)-1):(max(sims)+1),freq=FALSE,
+     xlab="Number of steps",xlim=c(0,20),
+     main=paste("Mean first return time is",mean(sims)))
+
+summary(sims)
+```
+
+Suppose the random walk begins at vertex C. What is the expected number of steps until the walker reaches A? Hint: Make A an absorbing state, then calculate matrices R and M.
+
+```{r}
+R<-P[2:5,2:5]
+R
+
+M<-solve(diag(4)-R)
+M
+
+answer<-sum(M[2,])
+answer
+```
+
+Suppose the random walk begins at vertex C. What is the expected number of visits to B before the walker reaches A?
+
+```{r}
+
+M[2,1]
+
+```
+
+Suppose the random walk begins at vertex B. What is the probability that the walker reaches A before C?
+
+```{r}
+library(expm)
+abs_C_A = P
+abs_C_A[1,]<-c(1,0,0,0,0)
+abs_C_A[3,]<-c(0,0,1,0,0)
+temp<-abs_C_A %^% 1000
+temp[2,1]
+
+```
+
+------------------------------------------------------------------------
+
+## Realization of an unrestricted random walk
+
+We obtain a realization of an unrestricted random walk, for specified values of p and specified value of n, the length of the realization. By definition, \$X_n =\sum*{i=1}\^n Y_i \$, where\* ${\{Y_1, Y_2, . . . , Y_n}\}$ are independent and all are distributed as Y ,with $P[Y = 1] = p$ and $P[Y = −1] = q = 1 − p$. Hence at each stage, we generate a random observation from {−1, 1},with probability assigned to 1 being p and obtain $X_n$ as \$X_n =\sum{i=1}\^n Y_i \$.
+
+In the code we have taken four values of $p = {\{0.50,0.33,0.75,0.20}\}$, initial state as 0 and n = 25.
+
+### Part I: Input four sets of values of p
+
+```{r}
+S=c(-1,1); p1=c(1/2,1/2); p2=c(1/3,2/3); p3=c(1/4,3/4)
+p4=c(1/5,4/5); p=c(p1[2],p2[2],p3[2],p4[2])
+P=rbind(p1,p2,p3,p4); P
+```
+
+### Part II: Generate realizations
+
+```{r}
+
+n=25 # length of the realization
+x=matrix(nrow=n,ncol=4); x[1,]=c(0,0,0,0)
+for(j in 1:4)
+{
+set.seed(j)
+for(i in 2:n)
+{
+x[i,j]=x[i-1,j]+sample(S,1,P[j,],replace=T)
+}
+}
+x;
+
+```
+
+### Part III: Graphs of realizations
+
+```{r}
+png("output.png", width = 800, height = 600)
+par(mfcol=c(2,2));p=round(p,2);p
+prob=paste("p =",p,sep=" ")
+for(j in 1:4)
+{
+plot(1:n,x[,j],"o",main=prob[j],ylab="States",xlab="Time",
+col="dark blue",yaxt="n",lwd=2)
+axis(2,at=sort(unique(x[,j])),labels=sort(unique(x[,j])),las=2)
+}
+```

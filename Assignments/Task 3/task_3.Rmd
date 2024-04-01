@@ -11,22 +11,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # QUESTION 1 (10 MARKS):
 
-## A cell type can exist in four states: A growth state, a resting state, a reproduction state, or it can be dead. It starts in the growth state. From the growth state it moves to the resting state with a rate of 0.3 and to the reproduction state with a rate 0.1, or it dies with a rate of 0.1. From the resting state it moves to the growth state with a rate of 0.2, or it dies with a rate of 0.05. From the reproduction state it moves to the resting state at a rate 0.5, or it dies at a rate of 0.3. 
+## A cell type can exist in four states: A growth state, a resting state, a reproduction state, or it can be dead. It starts in the growth state. From the growth state it moves to the resting state with a rate of 0.3 and to the reproduction state with a rate 0.1, or it dies with a rate of 0.1. From the resting state it moves to the growth state with a rate of 0.2, or it dies with a rate of 0.05. From the reproduction state it moves to the resting state at a rate 0.5, or it dies at a rate of 0.3.
 
 $$
-Q\ matrix = \left[\begin{matrix}
+generatot\ matrix\ Q = \left[\begin{matrix}
 -0.5 & 0.3 & 0.1 & 0.1 \\
-0.2 & 0.25 & 0 & 0.05 \\
+0.2 & -0.25 & 0 & 0.05 \\
 0 & 0.5 & -0.8 & 0.3 \\
 0 & 0 & 0 & 0
 \end{matrix}\right]
 $$
 
-> -   there is no transition rate for recurrence
->
 > -   the sum of all rows is equal to `0`
 
-Transition Matrix
+Generator matrix
 
 $$
 P\ matrix = \left[\begin{matrix}
@@ -127,3 +125,160 @@ abs_rate
 ```{r}
 rowSums(abs_rate)
 ```
+
+> **From the question statement**
+>
+> all cells begin in the growth state therefore the lifespan of a cell is **12.261 units of time**
+
+#### Interpretation
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'Growth', fillcolor = '#35fe00', style = filled];
+      tab2 [label = 'Death', fillcolor = '#fe3500', style = filled];
+      
+      
+      # Arch
+      tab1 -> tab2 [label = '12.26 units of time'];
+  
+      
+}")
+```
+
+> It takes `12 units of time` from the growth stage to dying
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'Resting', fillcolor = '#bcfe00', style = filled];
+      tab2 [label = 'Death', fillcolor = '#fe3500', style = filled];
+      
+      
+      # Arch
+      tab1 -> tab2 [label = '13.81 units of time'];
+  
+      
+}")
+```
+
+> It takes `12 units of time` from the resting stage to dying
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'Reproduction', fillcolor = '#defe00', style = filled];
+      tab2 [label = 'Death', fillcolor = '#fe3500', style = filled];
+      
+      
+      # Arch
+      tab1 -> tab2 [label = '9.88 units of time'];
+  
+      
+}")
+```
+
+> It takes `10 units of time` from the reproduction stage to dying
+
+------------------------------------------------------------------------
+
+-   ::: {style="background-color: #4ac6f0;"}
+    -   the cell has to move from **Resting** to **Growth** before it dies if it does not die immediately after transitioning from the resting state. This is reflected in the longer time it takes for the cell to die once it starts at the resting state
+
+    -   A **Reproducing** cell dies the fastest. This can be as a result of multiple division and loss of material from within the cell leading to a faster deterioration
+
+    -   **Resting** state can mean a preserved cell this may also account for the transition from preservation to initial growth and then reproduction with death as a finality. It could also account for the death as not all cells can recover from a preservation state.
+    :::
+
+------------------------------------------------------------------------
+
+# Question 2
+
+## Consider the Markov chain with state space E = {1, 2, 3} and transition matrix
+
+$$
+P = \left[\begin{matrix}
+0.2 & 0.3 & 0.5\\
+0.4 & 0.4 & 0.2\\
+0&0&1
+\end{matrix}\right]
+$$
+
+### a.) Using R program, draw a well labeled transitional plot of the Markov chain P
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'A', fillcolor = '#35fe00', style = filled];
+      tab2 [label = 'B', fillcolor = '#fe3500', style = filled];
+      tab3 [label = 'c', fillcolor = '#0035fe', style = filled];
+
+      
+      
+      # Arch
+      tab1 -> tab1 [label = '0.2'];
+      tab1 -> tab2 [label = '0.3'];
+      tab1 -> tab3 [label = '0.5'];
+      tab2 -> tab1 [label = '0.4'];
+      tab2 -> tab2 [label = '0.4'];
+      tab2 -> tab3 [label = '0.2'];
+      tab3 -> tab3 [label = '1'];
+  
+      
+}")   
+
+```
+
+> There is communication between state `A` and state `B`
+>
+> the state `c` is an **absorption state** once the states change to state c it keeps recurring within c but there is no chance of anything moving out of state c
+
+### b.) Identify the recurrent states, transient states, and the absorbing states
+
+The transient states are `a` and `b` as they communicate between each other in a cyclic manner
+
+The absorbing state is state `c` as it only receives but does not output any value except to itself
+
+The recurrent states are `a` , `b` and `c` as they have entry into the state and a self-communication
+
+## Using R scripts determine the limiting transition probability of P
+
+**Limiting transition probability** – is the steady state of a matrix `P`
+
+```{r}
+library(markovchain)
+
+q2_p = matrix(c(0.2, 0.3, 0.5, 0.4, 0.4, 0.2, 0, 0, 1), nrow = 3, byrow = TRUE)
+states = c('a', 'b', 'c')
+colnames(q2_p) = states
+rownames(q2_p) = states
+q2_p
+```
+
+### Find the steady state
+
+```{r}
+markov_chain = new("markovchain", states = states,transitionMatrix = q2_p)
+steady = steadyStates(markov_chain)
+steady
+```
+
+The overall weight of any cost calculation based on the transition matrix P can be calculated as
+
+$$
+cost = 0a + 0b + c
+$$
+
+where `a` `b` and `c` are the individual costs in state a, b and c respectively

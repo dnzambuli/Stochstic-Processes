@@ -1,0 +1,522 @@
+---
+title: "Mid Sem"
+author: "Nzambuli Daniel 665721"
+date: "2024-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(markovchain)
+```
+
+# Question 1
+
+Suppose a data scientist at a business analytics company can be a trainee, a junior data scientist or a senior data scientist. Suppose the three levels are denoted by 1, 2, 3 respectively. If X(t) denotes the level of the person at time t, we assume that X(t) evolves as a Markov chain in continuous time. Suppose the mean sojourn times in the three states 1, 2 and 3 are 0.1, 0.2, 2 years respectively. It is given that a trainee is promoted to a junior data scientist with probability 2/3 and to a senior data scientist with probability 1/3. A junior data scientist leaves and is replaced by a trainee with probability 2/5 and is promoted to a senior data scientist with probability 3/5. A senior data scientist leaves and is replaced by a trainee with probability 1/4 and by a junior data scientist with probability 3/4. Find the long run average proportion of time a data scientist is a senior data scientist.
+
+> trainee – 1
+>
+> junior data scientist – 2
+>
+> senior data scientist – 3
+
+## Hold Time Param
+
+```{r}
+hold.Time = matrix(c(0.1, 0.2, 2), nrow = 1, byrow = TRUE)
+nm.1 = c("trainee", "Junior DS", "Senior DS")
+colnames(hold.Time) = nm.1
+hold.Time
+```
+
+## p matrix
+
+$$
+P = \left[\begin{matrix}
+0&\frac{2}{3}&\frac{1}{3}\\
+\frac{2}{5} & 0 & \frac{3}{5}\\
+\frac{1}{4} & \frac{3}{4} & 0
+\end{matrix}\right]
+$$
+
+The matrix of probabilities is considered a `P` transition probability matrix because
+
+-   the rows add up to 1
+
+-   the column is 0
+
+```{r}
+library(DiagrammeR)
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = 'trainee', fillcolor = '#35fe00', style = filled];
+      tab2 [label = 'Junior Data Scientist', fillcolor = '#fe3500', style = filled];
+      tab3 [label = 'Senior Data Scientist', fillcolor = '#0035fe', style = filled];
+
+      
+      
+      # Arch
+      tab1 -> tab2 [label = '2/3'];
+      tab1 -> tab3 [label = '1/3'];
+      tab2 -> tab1 [label = '2/5'];
+      tab2 -> tab3 [label = '3/5'];
+      tab3 -> tab1 [label = '1/4'];
+      tab3 -> tab2 [label = '3/4'];
+  
+      
+}")  
+```
+
+There is a transition between all the states of the data scientist journey.
+
+## Forming Q matrix
+
+to get the generator matrix
+
+-   the main diagonal becomes $-1 * holding\ time\ parameter$
+
+-   the rows of the generator matrix should add up to `0`
+
+$$
+Q = \left[\begin{matrix}
+-1 & \frac{2}{3} & \frac{1}{3}\\
+\frac{4}{5} & -2 & \frac{6}{5}\\
+\frac{5}{4} & \frac{15}{4} & -20
+\end{matrix}\right]\\\ \\
+= \left[\begin{matrix}
+-3 & 2 & 1\\
+2 & -5 & 3\\
+5 & 15 & -20
+\end{matrix}\right]
+$$
+
+the average proportion of time can be expressed as $\pi_{trainee},\ \pi_{junior},\ \pi_{senior}$
+
+## Find the Pi values
+
+```{r}
+q.1= matrix(c(-3, 2, 1, 4, -10, 6, 5, 15, -20), nrow = 3, byrow = TRUE)
+colnames(q.1) = nm.1
+rownames(q.1) = nm.1
+q.1
+```
+
+to form the linear equations
+
+$$
+-3\pi_{t} + 2\pi_{j} + \pi_{s} = 0\\
+2\pi_{t} -5\pi_{j} + 3\pi_{s} = 0\\
+1\pi_{t} + 3\pi_{j} - 4\pi_{s} = 0\\
+\pi_{t} + \pi_{j} + \pi_{s} = 1
+$$
+
+$$
+\left[\begin{array}{@{}ccc|c@{}}
+-3 & 4 & 5 & 0\\
+2 & -10 & 15 & 0\\
+1& 6 & -20 & 0\\
+1& 1 & 1 & 1
+\end{array}\right]
+$$
+
+$$
+\left[\begin{array}{@{}ccc|c@{}}
+1 & -\frac{4}{3} & -\frac{5}{3} & 0\\
+0 & -\frac{22}{3} & \frac{55}{3} & 0\\
+0& \frac{22}{3} & -\frac{55}{3} & 0\\
+0& \frac{7}{3} & \frac{8}{3} & 1
+\end{array}\right]
+$$
+
+$$
+\left[\begin{array}{@{}ccc|c@{}}
+1 & 0 & -5 & 0\\
+0 & 1 & -\frac{5}{2} & 0\\
+0 & 0 & 0 & 0\\
+0 & 0 & \frac{17}{2} & 1
+\end{array}\right]
+$$
+
+$$
+\left[\begin{array}{@{}ccc|c@{}}
+1 & 0 & 0 & \frac{10}{17}\\
+0 & 1 & 0 & \frac{5}{17}\\
+0 & 0 & 0 & 0\\
+0 & 0 & 1 & \frac{2}{17}
+\end{array}\right]
+$$
+
+### Function to make the steady state probabilities
+
+```{r}
+library(matlib)
+
+stead_probs = function(q.1){
+  eig = eigen(t(q.1))
+  
+  # extract eigen value for each eigen vector
+  pi = eig$vectors[, which.min(abs(eig$values))]
+  
+  # normalize
+  pi = pi/sum(pi)
+  
+  return(pi)
+}
+```
+
+```{r}
+steady_prob.1 = stead_probs(q.1)
+steady_prob.1
+```
+
+## Confirming if the manual calculation matches function Probability
+
+```{r}
+steady = matrix(c(10/17, 5/17, 2/17), nrow = 1, byrow = TRUE)
+colnames(steady) = nm.1
+cat("The steady state probability is:\n\n")
+steady
+```
+
+> The data scientist remain as senior data scientists for 0.1176 of a year.
+
+# Question 2
+
+Suppose ${X(t), t \geq 0}$ is a continuous time Markov chain with state space $S = {1, 2, 3, 4}$ and intensity matrix Q as given below.
+
+$$
+Q = \left[\begin{matrix}
+-3 & 2 & 0 & 1\\
+0 & -2 & \frac{1}{2} & \frac{3}{2}\\
+1 & 1 & -4 & 2\\
+1 & 0 & 0 & -1
+\end{matrix}\right]
+$$
+
+## a. Find the parameters of the sojourn time random variables. What are the expected sojourn times in the 4 states?
+
+sojourn time means that the states are held to a unit time
+
+-   expressed as a $-\ diagonal(Q)$
+
+```{r}
+q.2 = matrix(c(-3, 2, 0, 1, 0, -2, 1/2, 3/2, 1, 1, -4, 2, 1, 0, 0, -1), nrow = 4, byrow = TRUE)
+hold.time.2 = matrix(-diag(q.2), nrow = 1, byrow = TRUE)
+nm.2 = c("1", "2", "3", "4")
+colnames(hold.time.2) = nm.2
+
+cat("The expected sojourn time is: \n\n")
+hold.time.2
+```
+
+> Holding a State is
+>
+> -   State 1 – `3 times per unit time`
+>
+> -   State 2 – `2 times per unit time`
+>
+> -   State 3 – `4 times per unit time`
+>
+> -   State 4 – `Once per unit time`
+
+## b. Find the transition probability matrix of the embedded Markov chain
+
+> **Requirements for a Transition Probability Matrix**
+>
+> -   row should add up to 1
+>
+> -   main diagonal should all be 0
+
+$$
+P = \left[\begin{matrix}
+0 & \frac{2}{3} & 0 & \frac{1}{3}\\
+0 & 0 & \frac{1}{4} & \frac{3}{4}\\
+\frac{1}{4} & \frac{1}{4} & 0 & \frac{1}{2}\\
+1 & 0 & 0 & 0
+\end{matrix}\right]
+$$
+
+```{r}
+grViz("digraph{
+      graph [rankdir = 'LR'];
+      node [format = 'helvetica', shape = 'circle'];
+      
+      # the nodes
+      tab1 [label = '1', fillcolor = '#35fe00', style = filled];
+      tab2 [label = '2', fillcolor = '#fe3500', style = filled];
+      tab3 [label = '3', fillcolor = '#0035fe', style = filled];
+      tab4 [label = '4', fillcolor = '#cb35fe', style = filled];
+
+      
+      
+      # Arch
+      tab1 -> tab2 [label = '2/3'];
+      tab1 -> tab4 [label = '1/3'];
+      tab2 -> tab3 [label = '1/4'];
+      tab2 -> tab4 [label = '3/4'];
+      tab3 -> tab1 [label = '1/4'];
+      tab3 -> tab2 [label = '1/4'];
+      tab3 -> tab4 [label = '1/2'];
+      tab4 -> tab1 [label = '1'];
+  
+      
+}")  
+```
+
+> **Interpretation**
+>
+> There is communication between all the states – there is a link between all the nodes
+>
+> There is no absorption node – there is no termination of the transition between states
+>
+> There is no recurrence within a node – once in a node there has to be transition to the next node
+
+## c. Examine if the continuous time Markov chain is irreducible.
+
+It's possible to transition from any state to any other state, either directly or indirectly.
+
+**The communication between the nodes is such that**
+
+-   State 1 -- $\frac{2}{3}$ --\> State 2 -- $\frac{1}{4}$ --\> State 3 -- $\frac{1}{2}$ --\> State 4
+
+-   State 2 -- $\frac{1}{4}$ --\> State 3 -- $\frac{1}{2}$ --\> State 4 -- $1$ --\> State 1
+
+-   State 1 -- $\frac{1}{3}$ --\> State 4
+
+-   State 2 -- $\frac{3}{4}$ --\> State 4
+
+-   State 3 -- $\frac{1}{4}$ --\> State 2
+
+It is observed that it is possible to move from any state to any other state either directly or indirectly
+
+## d. Examine whether the states are transient or persistent.
+
+A state space is transient if starting from `state a`, there is a probability $\gt 0$ that the chain will **never** return to `state a`.
+
+A state space is persistent if starting from `state a`, the chain will eventually return to `state a` with probability 1. Can return to `state a`l infinitely.
+
+> Because of the communication between **all** the nodes of the markov chain the states are persistent.
+>
+> This also means that the states are not transient.
+
+## e. Write the system of balance equations and solve it to get the long run distribution.
+
+represent the states as
+
+-   1 – a
+
+-   2 – b
+
+-   3 – c
+
+-   4 – d
+
+$$
+-3a + c + d = 0\\
+2a -2b + c = 0\\
+0.5b -4d = 0\\
+a + 1.5b + 2c -d = 0\\
+a + b + c + d = 1
+$$
+
+### Solve for distribution
+
+```{r}
+steady_prob.2 = stead_probs(q.2)
+steady_prob.2
+```
+
+> **Considering the presence of complex numbers**
+>
+> -   None of the long run values of a, b, c, d have a complex numbers are $\gt 0$ which means that the distribution of values for each of the states is just the real part of the state values
+>
+> -   To confirm the long-run distribution
+>
+> $$
+> a + 1.5b + 2c - d = 0
+> $$
+
+**Confirm the Accuracy**
+
+```{r}
+a = 1
+b = 1.5
+c = 2
+d = -1
+round((a * Re(steady_prob.2[1])) + (b * Re(steady_prob.2[2])) + (c * Re(steady_prob.2[3])) + (d * Re(steady_prob.2[4])), 4) == 0
+```
+
+> Because of the `TRUE` truth value output indicates that the long run distribution has been achieved as the comparison parameter matches to `0`
+>
+> The values were rounded off as they were very many decimal places indicating the number is small based on the threshold chosen of `4 decimal places` indicating $\approx 0$
+
+The long run distribution will be
+
+-   state 1 – `0.19736842`
+
+-   state 2 – `0.21052632`
+
+-   state 3 – `0.02631579`
+
+-   state 4 – `0.56578947`
+
+## f. Find the stationary distribution. Is it the same as the long run distribution?
+
+**Stationary distribution** – is a probability distribution that remains unchanged as the Markov chain evolves over time.
+
+$$
+steady\ state = 1 = \pi_{1} + \pi_{2} + \pi_{3} + \pi_{4}
+$$
+
+```{r}
+sum(Re(steady_prob.2))
+```
+
+> **Interpretation**
+>
+> considering the `steady_prob.2` represents the values of $\pi$ values of the markov distribution
+>
+> The sum of the markov distribution equals to `1`
+
+### conclusion
+
+$$
+stationary\ distribution = long\ run\ distribution
+$$
+
+## g. Find the long run mean fraction of time system is in states 1, 2, 3, 4
+
+```{r}
+cat("Long run mean fraction of time (unit time): \n \n")
+long_mean_time = matrix(Re(steady_prob.2), nrow = 1, byrow = TRUE)
+colnames(long_mean_time) = nm.2
+long_mean_time
+```
+
+# Question 3
+
+Suppose ${X(t), t \geq 0}$ is a continuous time Markov chain with state space $S = {1, 2, 3, 4}$ and intensity matrix Q as given below.
+
+$$
+Q = \left[\begin{matrix} 
+-3 & 2 & 0 & 1\\
+0 & -2 & \frac{1}{2} & \frac{3}{2}\\
+1 & 1 & -4 & 2\\
+1 & 0 & 0 & -1
+\end{matrix}\right]
+$$
+
+```{r}
+q.3 = matrix(c(-3, 2, 0, 1, 0, -2, 1/2, 3/2, 1, 1, -4, 2, 1, 0, 0, -1),nrow = 4, byrow = TRUE)
+colnames(q.3) = rownames(q.3) = nm.2
+q.3
+```
+
+## a. Obtain approximately the matrix P(t) of transition probability functions, for any three values of t.
+
+The function does $Q_{i} = P(t)_{i} * Q$
+
+```{r}
+states = q.3
+t = seq(0, 1.5, 0.5)
+```
+
+$P(t) = e^{Q_{t}}$ is the chosen function
+
+-   expm – helps raise matrices to a power
+
+```{r}
+library(expm)
+prob.func = function(state, t){
+  P.t = expm(state * t) 
+  return(P.t)
+}
+```
+
+Forming an array of the probability matrices $P(t)$
+
+```{r}
+trans.mat= c()
+for (i in 1:length(t)){
+  trans.mat[[i]] = prob.func(states, t[i])
+}
+trans.mat
+```
+
+## b. Find P(t) for sufficiently large t till the rows are identical.
+
+```{r}
+check_mat = function(A, B){
+  b = 0
+  for (i in 1:nrow(A)){
+    if(all(all.equal(A[i,], B[i,]) == TRUE)){
+      b = b + 1
+    }else{
+      b = b - 1
+    }
+  }
+  return(b = nrow(A))
+}
+```
+
+```{r}
+# Define p.initial
+p.initial = trans.mat[[1]]
+
+i = 0
+
+while (i < 100) {
+  i = i + 1
+  
+  p.new = p.initial %*% q.3
+  
+  # Check if the row values are equal
+  if (check_mat(p.new, p.initial)) {
+    print(p.new)
+    cat("\n\nAnd the t value at that point is:\t", i,"\n\n")
+    break
+  } else {
+    print("P(t) is still too small for the rows to be equal")
+  }
+  
+  # Update p.initial for the next iteration
+  p.initial = p.new
+}
+
+```
+
+## c. Solve the system of equations $\pi Q = 0$ under the condition that sum of the components of $\pi$ is 1
+
+if $\pi = 1$ then for $\pi Q = 0$ is the long run distribution of matrix Q
+
+```{r}
+Re(stead_probs(q.3))
+```
+
+To confirm the accuracy of the expression
+
+-   $\pi$ vector matrix
+
+-   Q the matrix provided
+
+$$
+\pi * Q \approx 0
+$$
+
+Approximation is introduced because of accuracy concerns due to the rounding off errors by the program
+
+```{r}
+pi.mat = matrix(c( 0.19736842,0.21052632,0.02631579,0.56578947), nrow = 1, byrow = TRUE) 
+
+output.3 = pi.mat %*% q.3
+
+output.3
+```
+
+the largest absolute value is $0.00000001$ which is a significantly small number $\approx 0$
